@@ -1,1 +1,1 @@
-# Real-time MLB Home Run Alerts app (final version is being completed)
+# Final live MLB Home Run Alerts app with full frontend, live data, and no routing (code is in final integration stage)
