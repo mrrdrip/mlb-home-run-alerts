@@ -1,5 +1,5 @@
 
-from flask import Flask, request
+from flask import Flask, render_template, request
 import requests
 import firebase_admin
 from firebase_admin import credentials, messaging
@@ -9,12 +9,11 @@ import json
 
 app = Flask(__name__)
 
-# Load Firebase credentials from Render environment variable
+# Load Firebase credentials from environment variable
 cred_json = json.loads(os.environ['FIREBASE_JSON'])
 cred = credentials.Certificate(cred_json)
 firebase_admin.initialize_app(cred)
 
-# Replace this with your real FCM token(s)
 device_tokens = [
     "your-device-token-here"
 ]
@@ -24,7 +23,6 @@ def get_home_run_events():
     schedule_url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date}"
     response = requests.get(schedule_url)
     data = response.json()
-
     games = data.get("dates", [])[0].get("games", [])
     hr_events = []
 
@@ -32,7 +30,6 @@ def get_home_run_events():
         game_id = game['gamePk']
         feed_url = f"https://statsapi.mlb.com/api/v1.1/game/{game_id}/feed/live"
         feed = requests.get(feed_url).json()
-
         all_plays = feed.get("liveData", {}).get("plays", {}).get("allPlays", [])
         for play in all_plays:
             if play.get("result", {}).get("event") == "Home Run":
@@ -56,17 +53,15 @@ def send_push_alert(message_body):
 
 @app.route("/")
 def home():
-    return "MLB Home Run Alerts is running! Visit /check-hr to fetch home runs."
+    return render_template("index.html")
 
 @app.route("/check-hr")
 def check_home_runs():
     events = get_home_run_events()
     if not events:
         return "No HRs yet."
-
     for hr in events:
         send_push_alert(hr)
-
     return f"Sent alerts for: {', '.join(events)}"
 
 if __name__ == "__main__":
