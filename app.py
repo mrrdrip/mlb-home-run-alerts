@@ -1,5 +1,5 @@
 
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template_string, send_from_directory
 import requests
 import firebase_admin
 from firebase_admin import credentials, messaging
@@ -60,6 +60,20 @@ def send_push_alert(message_body):
         response = messaging.send(message)
         print(f"Sent message to {token}: {response}")
 
+@app.route("/")
+def home():
+    return """
+    <html>
+    <head><title>MLB Home Run Alerts</title></head>
+    <body style='background-color:#461D7C; color:#FDD023; font-family:sans-serif; text-align:center;'>
+    <img src='/static/logo.png' alt='Logo' style='margin-top:30px; height:80px;'>
+    <h1>Welcome to MLB Home Run Alerts</h1>
+    <p>Click below to view today's home run alerts in real time.</p>
+    <a href='/check-hr' style='display:inline-block;padding:12px 24px;background:#FDD023;color:#461D7C;font-weight:bold;border-radius:8px;text-decoration:none;'>Check Home Runs</a>
+    </body>
+    </html>
+    """
+
 @app.route("/check-hr")
 def check_home_runs():
     events = get_home_run_events()
@@ -68,6 +82,7 @@ def check_home_runs():
         <html>
         <head><title>HR Alerts</title></head>
         <body style='background-color:#461D7C; color:#FDD023; font-family:sans-serif; text-align:center;'>
+        <img src='/static/logo.png' alt='Logo' style='margin-top:20px; height:60px;'>
         <h1>No Home Runs Yet</h1>
         <a href='/check-hr' style='display:inline-block;padding:10px 20px;background:#FDD023;color:#461D7C;font-weight:bold;border-radius:6px;text-decoration:none;'>Refresh</a>
         </body>
@@ -81,8 +96,9 @@ def check_home_runs():
     <html>
     <head><title>HR Alerts</title></head>
     <body style='background-color:#461D7C; color:#FDD023; font-family:sans-serif;'>
-    <h1 style='text-align:center;'>Home Run Alerts</h1>
     <div style='text-align:center;'>
+    <img src='/static/logo.png' alt='Logo' style='margin-top:20px; height:60px;'>
+    <h1>Home Run Alerts</h1>
     <a href='/check-hr' style='display:inline-block;padding:10px 20px;margin-bottom:20px;background:#FDD023;color:#461D7C;font-weight:bold;border-radius:6px;text-decoration:none;'>Refresh</a>
     </div>
     <ul>
@@ -96,6 +112,10 @@ def check_home_runs():
     </body>
     </html>
     """, events=events)
+
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    return send_from_directory('static', filename)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
