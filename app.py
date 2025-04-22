@@ -5,12 +5,16 @@ import firebase_admin
 from firebase_admin import credentials, messaging
 import time
 import os
+import json
 
 app = Flask(__name__)
 
-cred = credentials.Certificate("firebase-adminsdk.json")
+# Load Firebase credentials securely from environment variable
+cred_json = json.loads(os.environ['FIREBASE_JSON'])
+cred = credentials.Certificate(cred_json)
 firebase_admin.initialize_app(cred)
 
+# List of FCM device tokens (replace with real tokens)
 device_tokens = [
     "your-device-token-here"
 ]
