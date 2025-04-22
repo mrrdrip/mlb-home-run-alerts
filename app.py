@@ -9,12 +9,12 @@ import json
 
 app = Flask(__name__)
 
-# Load Firebase credentials securely from environment variable
+# Load Firebase credentials from Render environment variable
 cred_json = json.loads(os.environ['FIREBASE_JSON'])
 cred = credentials.Certificate(cred_json)
 firebase_admin.initialize_app(cred)
 
-# List of FCM device tokens (replace with real tokens)
+# Replace this with your real FCM token(s)
 device_tokens = [
     "your-device-token-here"
 ]
@@ -53,6 +53,10 @@ def send_push_alert(message_body):
         )
         response = messaging.send(message)
         print(f"Sent message to {token}: {response}")
+
+@app.route("/")
+def home():
+    return "MLB Home Run Alerts is running! Visit /check-hr to fetch home runs."
 
 @app.route("/check-hr")
 def check_home_runs():
