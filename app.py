@@ -89,10 +89,12 @@ def check_home_runs():
         </html>
         """)
 
-    for hr in events:
-        send_push_alert(hr["text"])
+    event_html = ''.join(
+        f"<li style='margin-bottom:15px;'><img src='https://www.mlbstatic.com/team-logos/{hr['team_id']}.svg' alt='team logo' style='height:25px;vertical-align:middle;margin-right:10px;'> {hr['text']} <br><small>{hr['time']}</small></li>"
+        for hr in events
+    )
 
-    return render_template_string("""
+    return f"""
     <html>
     <head><title>HR Alerts</title></head>
     <body style='background-color:#461D7C; color:#FDD023; font-family:sans-serif;'>
@@ -101,17 +103,10 @@ def check_home_runs():
     <h1>Home Run Alerts</h1>
     <a href='/check-hr' style='display:inline-block;padding:10px 20px;margin-bottom:20px;background:#FDD023;color:#461D7C;font-weight:bold;border-radius:6px;text-decoration:none;'>Refresh</a>
     </div>
-    <ul>
-    {% for hr in events %}
-      <li style='margin-bottom:15px;'>
-        <img src="https://www.mlbstatic.com/team-logos/{{ hr.team_id }}.svg" alt="team logo" style="height:25px;vertical-align:middle;margin-right:10px;">
-        {{ hr.text }} <br><small>{{ hr.time }}</small>
-      </li>
-    {% endfor %}
-    </ul>
+    <ul>{event_html}</ul>
     </body>
     </html>
-    """, events=events)
+    """
 
 @app.route('/static/<path:filename>')
 def static_files(filename):
