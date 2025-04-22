@@ -1,5 +1,5 @@
 
-from flask import Flask, render_template, request
+from flask import Flask, request, render_template_string
 import requests
 import firebase_admin
 from firebase_admin import credentials, messaging
@@ -9,11 +9,12 @@ import json
 
 app = Flask(__name__)
 
-# Load Firebase credentials from environment variable
+# Load Firebase credentials securely from environment variable
 cred_json = json.loads(os.environ['FIREBASE_JSON'])
 cred = credentials.Certificate(cred_json)
 firebase_admin.initialize_app(cred)
 
+# List of FCM device tokens (replace with real tokens)
 device_tokens = [
     "your-device-token-here"
 ]
@@ -23,6 +24,7 @@ def get_home_run_events():
     schedule_url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date}"
     response = requests.get(schedule_url)
     data = response.json()
+
     games = data.get("dates", [])[0].get("games", [])
     hr_events = []
 
@@ -30,12 +32,19 @@ def get_home_run_events():
         game_id = game['gamePk']
         feed_url = f"https://statsapi.mlb.com/api/v1.1/game/{game_id}/feed/live"
         feed = requests.get(feed_url).json()
+
         all_plays = feed.get("liveData", {}).get("plays", {}).get("allPlays", [])
         for play in all_plays:
             if play.get("result", {}).get("event") == "Home Run":
                 batter = play['matchup']['batter']['fullName']
                 team = play.get('team', {}).get('name', 'Unknown')
-                hr_events.append(f"{batter} hit a HR for {team}!")
+                team_id = play.get('team', {}).get('id', '')
+                timestamp = play.get('about', {}).get('startTime', '')
+                hr_events.append({
+                    "text": f"{batter} hit a HR for {team}!",
+                    "time": timestamp,
+                    "team_id": team_id
+                })
 
     return hr_events
 
@@ -51,18 +60,42 @@ def send_push_alert(message_body):
         response = messaging.send(message)
         print(f"Sent message to {token}: {response}")
 
-@app.route("/")
-def home():
-    return render_template("index.html")
-
 @app.route("/check-hr")
 def check_home_runs():
     events = get_home_run_events()
     if not events:
-        return "No HRs yet."
+        return render_template_string("""
+        <html>
+        <head><title>HR Alerts</title></head>
+        <body style='background-color:#461D7C; color:#FDD023; font-family:sans-serif; text-align:center;'>
+        <h1>No Home Runs Yet</h1>
+        <a href='/check-hr' style='display:inline-block;padding:10px 20px;background:#FDD023;color:#461D7C;font-weight:bold;border-radius:6px;text-decoration:none;'>Refresh</a>
+        </body>
+        </html>
+        """)
+
     for hr in events:
-        send_push_alert(hr)
-    return f"Sent alerts for: {', '.join(events)}"
+        send_push_alert(hr["text"])
+
+    return render_template_string("""
+    <html>
+    <head><title>HR Alerts</title></head>
+    <body style='background-color:#461D7C; color:#FDD023; font-family:sans-serif;'>
+    <h1 style='text-align:center;'>Home Run Alerts</h1>
+    <div style='text-align:center;'>
+    <a href='/check-hr' style='display:inline-block;padding:10px 20px;margin-bottom:20px;background:#FDD023;color:#461D7C;font-weight:bold;border-radius:6px;text-decoration:none;'>Refresh</a>
+    </div>
+    <ul>
+    {% for hr in events %}
+      <li style='margin-bottom:15px;'>
+        <img src="https://www.mlbstatic.com/team-logos/{{ hr.team_id }}.svg" alt="team logo" style="height:25px;vertical-align:middle;margin-right:10px;">
+        {{ hr.text }} <br><small>{{ hr.time }}</small>
+      </li>
+    {% endfor %}
+    </ul>
+    </body>
+    </html>
+    """, events=events)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
